@@ -3,7 +3,7 @@ from glob import glob
 import cv2
 import numpy as np
 
-def process_image_auto_adapt(image_path, area_ratio_thresh=0.01):
+def process_image_auto_adapt(image_path):
     """处理单张图像，自动适应边缘面积阈值"""
     img = cv2.imread(image_path)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -31,18 +31,6 @@ def process_image_auto_adapt(image_path, area_ratio_thresh=0.01):
         if stats[i, cv2.CC_STAT_AREA] >= min_area:
             mask[labels == i] = 255
 
-
-    # 自动面积阈值（图像大小 × 比例）
-    h, w = mask.shape
-    adaptive_thresh = h * w * area_ratio_thresh
-    adaptive_thresh=2000
-
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    filtered_mask = np.zeros_like(mask)
-    for cnt in contours:
-        area = cv2.contourArea(cnt)
-        if 100 < area < adaptive_thresh:
-            cv2.drawContours(filtered_mask, [cnt], -1, 255, thickness=cv2.FILLED)
 
     return mask
 
