@@ -1,44 +1,90 @@
+import os
+from glob import glob
 import cv2
 import numpy as np
-import os
 
-# ==== 路径设置 ====
-input_dir = './dataset/images'      # 原图路径（如含裂缝的图片）
-output_dir = './dataset/masks'      # 输出的 mask 图路径（黑底白斑）
-
-os.makedirs(output_dir, exist_ok=True)
-
-# ==== 处理所有图像 ====
-for fname in os.listdir(input_dir):
-    if not fname.lower().endswith(('.png', '.jpg', '.jpeg','.bmp')):
-        continue
-
-    # 读取图像
-    img_path = os.path.join(input_dir, fname)
-    img = cv2.imread(img_path)
-
-    if img is None:
-        print(f"Failed to load image: {img_path}")
-        continue
-
-    # 转灰度图
+def process_image_auto_adapt(image_path, area_ratio_thresh=0.01):
+    """处理单张图像，自动适应边缘面积阈值"""
+    img = cv2.imread(image_path)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # 去噪
+    blurred = cv2.GaussianBlur(gray, (3, 3), 0)
 
-    # ==== 阈值选择：提取“暗区域”（裂缝、划痕等） ====
-    # 可根据图像实际调整 upper 值（如 80 ~ 120）
-    lower = 0
-    upper = 150
-    mask = cv2.inRange(gray, lower, upper)  # 黑色/灰色变白，其它变黑
+    # 使用Sobel算子提取边缘
+    sobelx = cv2.Sobel(blurred, cv2.CV_64F, 1, 0, ksize=3)
+    sobely = cv2.Sobel(blurred, cv2.CV_64F, 0, 1, ksize=3)
+    sobel = np.sqrt(sobelx**2 + sobely**2)
+    sobel = np.uint8(np.clip(sobel, 0, 255))
 
-    # # ==== 可选：形态学处理，去除小噪声 ====
-    # kernel = np.ones((2, 2), np.uint8)
-    # mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=1)
-    # mask = cv2.morphologyEx(mask, cv2.MORPH_DILATE, kernel, iterations=1)
+    # Otsu阈值分割
+    _, thresh = cv2.threshold(sobel, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
-    # ==== 保存 mask 图 ====
-    out_path = os.path.join(output_dir, os.path.splitext(fname)[0] + '.png')
-    cv2.imwrite(out_path, mask)
+    # 形态学闭运算（细长结构，横向为主）
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 1))
+    morph = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=1)
 
-    print(f"[✔] Saved mask: {out_path}")
+    # 去除小区域
+    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(morph, connectivity=8)
+    min_area = 50
+    mask = np.zeros_like(morph)
+    for i in range(1, num_labels):
+        if stats[i, cv2.CC_STAT_AREA] >= min_area:
+            mask[labels == i] = 255
 
-print("\n✅ 所有图像处理完成。")
+
+    # 自动面积阈值（图像大小 × 比例）
+    h, w = mask.shape
+    adaptive_thresh = h * w * area_ratio_thresh
+    adaptive_thresh=2000
+
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    filtered_mask = np.zeros_like(mask)
+    for cnt in contours:
+        area = cv2.contourArea(cnt)
+        if 100 < area < adaptive_thresh:
+            cv2.drawContours(filtered_mask, [cnt], -1, 255, thickness=cv2.FILLED)
+
+    return mask
+
+
+# 示例：处理一个文件夹中的所有图像
+def batch_process_images(input_folder, output_folder, view_folder, image_exts=('*.jpg', '*.png', '*.bmp')):
+    os.makedirs(output_folder, exist_ok=True)
+    os.makedirs(view_folder, exist_ok=True)
+    image_paths = []
+    for ext in image_exts:
+        image_paths.extend(glob(os.path.join(input_folder, ext)))
+
+    for path in image_paths:
+        mask = process_image_auto_adapt(path)
+        filename = os.path.basename(path)
+        save_path = os.path.join(output_folder, f"mask_{filename}")
+        cv2.imwrite(save_path, mask)
+
+        # 原图和mask图合并为一张图，利用mask高亮划痕区域，保存到view文件夹
+        img = cv2.imread(path)
+        # img = cv2.resize(img, (512, 512))
+        # mask = cv2.resize(mask, (512, 512))
+        # 将mask转换为3通道图像
+        mask_3channel = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+        # 将mask_3channel中划痕区域设置为红色
+        mask_3channel[mask == 255] = [0, 0, 255]
+        # 将mask_3channel和img合并
+        merged_img = cv2.addWeighted(img, 0.5, mask_3channel, 0.5, 0)
+
+        cv2.imwrite(os.path.join(view_folder, f"view_{filename}"), merged_img)
+
+    return len(image_paths)
+
+
+
+
+
+
+
+
+
+# 示例调用代码（路径可替换）
+processed_count = batch_process_images("./dataset/images", "./dataset/masks", "./dataset/view")
+print(f"Processed {processed_count} images.")
+

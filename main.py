@@ -7,6 +7,12 @@ import os
 import numpy as np
 from PIL import Image
 
+
+import torch.nn as nn
+from collections import OrderedDict
+
+
+
 class CrackDetectionDataset(Dataset):
     def __init__(self, images_dir, masks_dir, transform=None):
         self.images_dir = images_dir
@@ -33,27 +39,12 @@ class CrackDetectionDataset(Dataset):
 
         return image, mask
 
-# 示例转换
-transform = transforms.Compose([
-    transforms.Resize((448, 448)),
-    transforms.ToTensor(),
-])
 
-# 创建数据集实例
-dataset = CrackDetectionDataset(
-    images_dir="./dataset/images/",
-    masks_dir="./dataset/masks/",
-    transform=transform
-)
 
-# 创建数据加载器
-dataloader = DataLoader(dataset, batch_size=4, shuffle=True, num_workers=4)
 
 
 #Unet语义分割
 
-import torch.nn as nn
-from collections import OrderedDict
 
 class UNet(nn.Module):
     def __init__(self, in_channels=3, out_channels=1, init_features=32):
@@ -145,47 +136,66 @@ class UNet(nn.Module):
                 ]
             )
         )
-
-# 实例化模型
-model = UNet().cuda()
+    
 
 
-#模型训练
+if __name__ == "__main__":
+    # 示例转换
+    transform = transforms.Compose([
+        transforms.Resize((448, 448)),
+        transforms.ToTensor(),
+    ])
 
-import torch.optim as optim
+    # 创建数据集实例
+    dataset = CrackDetectionDataset(
+        images_dir="./dataset/images/",
+        masks_dir="./dataset/masks/",
+        transform=transform
+    )
 
-# 设置损失函数和优化器criterion = nn.BCEWithLogitsLoss()  # 二分类交叉熵损失
-criterion = nn.BCEWithLogitsLoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
+    # 创建数据加载器
+    dataloader = DataLoader(dataset, batch_size=4, shuffle=True, num_workers=1)
 
-num_epochs = 100
-
-for epoch in range(num_epochs):
-    model.train()
-    running_loss = 0.0
-    for inputs, labels in dataloader:
-        inputs, labels = inputs.cuda(), labels.cuda()
-        optimizer.zero_grad()
-        outputs = model(inputs)
-        loss = criterion(outputs, labels.unsqueeze(1).float())
-        loss.backward()
-        optimizer.step()
-        running_loss += loss.item() * inputs.size(0)
-
-    epoch_loss = running_loss / len(dataloader.dataset)
-    print(f'Epoch {epoch+1}/{num_epochs}, Loss: {epoch_loss:.4f}')
+    # 实例化模型
+    model = UNet().cuda()
 
 
-# 在验证集上评估模型
-model.eval()
-with torch.no_grad():
-    correct = 0
-    total = 0
-    for inputs, labels in dataloader:
-        inputs, labels = inputs.cuda(), labels.cuda()
-        outputs = model(inputs)
-        predicted = (outputs > 0.5).float()
-        total += labels.size(0)
-        correct += (predicted == labels.unsqueeze(1)).sum().item()
+    #模型训练
 
-    print(f'Accuracy of the network on the dataset: {100 * correct / total:.2f}%')
+    import torch.optim as optim
+
+    # 设置损失函数和优化器criterion = nn.BCEWithLogitsLoss()  # 二分类交叉熵损失
+    criterion = nn.BCEWithLogitsLoss()
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+    num_epochs = 100
+
+    for epoch in range(num_epochs):
+        model.train()
+        running_loss = 0.0
+        for inputs, labels in dataloader:
+            inputs, labels = inputs.cuda(), labels.cuda()
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            loss = criterion(outputs, labels.unsqueeze(1).float())
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item() * inputs.size(0)
+
+        epoch_loss = running_loss / len(dataloader.dataset)
+        print(f'Epoch {epoch+1}/{num_epochs}, Loss: {epoch_loss:.4f}')
+
+
+    # 在验证集上评估模型
+    model.eval()
+    with torch.no_grad():
+        correct = 0
+        total = 0
+        for inputs, labels in dataloader:
+            inputs, labels = inputs.cuda(), labels.cuda()
+            outputs = model(inputs)
+            predicted = (outputs > 0.5).float()
+            total += labels.size(0)
+            correct += (predicted == labels.unsqueeze(1)).sum().item()
+
+        print(f'Accuracy of the network on the dataset: {100 * correct / total:.2f}%')
