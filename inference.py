@@ -5,6 +5,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 from unet_model import UNet
 import cv2
+
+
+# TODO
+# 批量推理
+# 推理速度
+# 数据增强训练
+# 优化数据集
+# 后处理
+
 # 设置
 image_path = "./dataset\images\Image_20250510163304998.bmp"
 model_path = "best_unet_model.pth"
