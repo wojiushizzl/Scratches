@@ -15,7 +15,8 @@ import cv2
 # 后处理
 
 # 设置
-image_path = "./dataset\images\Image_20250510163304998.bmp"
+# image_path = "./dataset\images\Image_20250510163304998.bmp"
+image_path = "C:/Users/ZZL/OneDrive/桌面/MV-CS050-10GM+DA5818283/Image_20250510162029539.bmp"
 model_path = "best_unet_model.pth"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 image_size = (448, 448)
