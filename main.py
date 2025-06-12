@@ -8,7 +8,10 @@ from PIL import Image
 from collections import OrderedDict
 from tqdm import tqdm
 
-# 数据集类
+
+
+
+# 数据集类  TODO 数据增强
 class CrackDetectionDataset(Dataset):
     def __init__(self, images_dir, masks_dir, image_size=(448, 448)):
         self.images = sorted([
@@ -109,6 +112,8 @@ if __name__ == "__main__":
         "./dataset/images/", "./dataset/masks/", image_size=(448, 448)
     )
     train_set, val_set = random_split(dataset, [int(0.8 * len(dataset)), len(dataset) - int(0.8 * len(dataset))])
+    print(f"train_set: {len(train_set)}, val_set: {len(val_set)}")
+
 
     train_loader = DataLoader(train_set, batch_size=4, shuffle=True, num_workers=0)
     val_loader = DataLoader(val_set, batch_size=4, shuffle=False, num_workers=0)

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from unet_model import UNet
 import cv2
-
+from PIL import ImageEnhance
 
 # TODO
 # 批量推理
@@ -29,6 +29,8 @@ transform = transforms.Compose([
 
 # 加载图片
 image = Image.open(image_path).convert("RGB")
+# 增加图片的亮度
+image = ImageEnhance.Brightness(image).enhance(0.5)
 original_size = image.size  # (width, height)
 
 input_tensor = transform(image).unsqueeze(0).to(device)  # [1, 3, H, W]
