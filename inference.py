@@ -6,10 +6,11 @@ import numpy as np
 from unet_model import UNet
 import cv2
 from PIL import ImageEnhance
+import time
 
 # TODO
 # 批量推理
-# 推理速度
+# 推理速度 20ms/image
 # 数据增强训练
 # 优化数据集
 # 后处理
@@ -30,7 +31,7 @@ transform = transforms.Compose([
 # 加载图片
 image = Image.open(image_path).convert("RGB")
 # 增加图片的亮度
-image = ImageEnhance.Brightness(image).enhance(0.5)
+image = ImageEnhance.Brightness(image).enhance(1)
 original_size = image.size  # (width, height)
 
 input_tensor = transform(image).unsqueeze(0).to(device)  # [1, 3, H, W]
@@ -41,9 +42,13 @@ model.load_state_dict(torch.load(model_path, map_location=device))
 model.eval()
 
 # 推理
-with torch.no_grad():
-    output = model(input_tensor)
-    pred = torch.sigmoid(output).squeeze().cpu().numpy()
+for i in range(100):
+    start_time = time.time()
+    with torch.no_grad():
+        output = model(input_tensor)
+        pred = torch.sigmoid(output).squeeze().cpu().numpy()
+    end_time = time.time()
+    print(f"推理时间: {(end_time - start_time)*1000} ms")
 
 # 1. 还原 pred 为原图大小
 pred_np = pred.squeeze()  # shape: (H, W)
