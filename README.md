@@ -1,6 +1,6 @@
-# 裂缝检测系统
+# 裂缝/划痕检测系统
 
-这是一个基于深度学习的裂缝检测系统，使用UNet架构实现图像分割，可以准确识别图像中的裂缝区域。
+这是一个基于深度学习的裂缝/划痕检测系统，使用UNet架构实现图像分割，可以准确识别图像中的裂缝/划痕区域。
 
 # 图示 demo
 
@@ -8,7 +8,7 @@
 
 ## 功能特点
 
-- 使用UNet深度学习模型进行裂缝检测
+- 使用UNet深度学习模型进行裂缝/划痕检测
 - 支持多种图像格式（JPG、PNG、BMP）
 - 使用Dice系数作为评估指标
 - 自动保存最佳模型
@@ -26,8 +26,8 @@
 
 1. 克隆仓库：
 ```bash
-git clone [repository-url]
-cd [repository-name]
+git clone https://github.com/wojiushizzl/Scratches.git
+cd Scratches
 ```
 
 2. 安装依赖：
