@@ -24,6 +24,10 @@ class CrackDetectionDataset(Dataset):
         ])
         self.img_tf = transforms.Compose([
             transforms.Resize(image_size),
+            transforms.RandomHorizontalFlip(),#水平翻转
+            transforms.RandomVerticalFlip(),#垂直翻转
+            transforms.RandomRotation(10),#随机旋转
+            transforms.ColorJitter(brightness=0.2),#随机颜色增强
             transforms.ToTensor(),
         ])
         self.mask_tf = transforms.Compose([
