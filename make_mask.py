@@ -153,7 +153,9 @@ if __name__ == "__main__":
 
     if task == "batch":
         # 批量处理图片，生成mask和view
-        processed_count = batch_process_images("./dataset/images", "./dataset/masks", "./dataset/view")
+        # processed_count = batch_process_images("./dataset/images", "./dataset/masks", "./dataset/view")
+        processed_count = batch_process_images("./dataset/videos/images2", "./dataset/videos/masks2", "./dataset/videos/view2")
+
         print(f"Processed {processed_count} images.")
 
     elif task == "single":
