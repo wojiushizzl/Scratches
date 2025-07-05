@@ -21,6 +21,30 @@ def post_process_mask(pred_np_resized, original_image_np, threshold=0.1, min_pix
     result = "OK" if np.sum(binary_mask) < min_pixel else "NG"
     overlay = original_image_np.copy()
     overlay[binary_mask == 1] = [255, 0, 0]  # 红色标记
+
+    # result 为 OK 或 NG，标注再图片，正方形，边长为 100，字体为白色，OK为绿色正方形，NG为红色正方形
+    # 正方形填充红或者绿色，边长为 100，字体为白色，右上角，OK为绿色正方形，NG为红色正方形，字体为白色
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 2
+    thickness = 5
+    text_size, _ = cv2.getTextSize(result, font, font_scale, thickness)
+    text_x = 10
+    text_y = 10
+    if result == "OK":
+        # rectangle 填充绿色
+        cv2.rectangle(overlay, (text_x, text_y), (text_x + 100, text_y + 100), (0, 255, 0), -1)
+        # 字体放置于正方形中间
+        text_x = text_x + 50 - 30
+        text_y = text_y + 50 + 30
+        cv2.putText(overlay, result, (text_x, text_y), font, font_scale, (255, 255, 255), thickness)
+    else:
+        # rectangle 填充红色
+        cv2.rectangle(overlay, (text_x, text_y), (text_x + 100, text_y + 100), (255, 0, 0), -1)
+        # 字体放置于正方形中间
+        text_x = text_x + 50 - 30
+        text_y = text_y + 50 + 30
+        cv2.putText(overlay, result, (text_x, text_y), font, font_scale, (255, 255, 255), thickness)
+
     return binary_mask, overlay, result
 
 def single_inference(image_path, threshold=0.1, min_pixel=1000, show_result=True):
@@ -31,8 +55,15 @@ def single_inference(image_path, threshold=0.1, min_pixel=1000, show_result=True
         transforms.ToTensor(),
     ])
 
-    # 加载并预处理图像
-    image = Image.open(image_path).convert("RGB")
+    # 加载并预处理图像，image可以是图片路径，也可以是cv2读取的图像
+    if isinstance(image_path, str):
+        image = Image.open(image_path).convert("RGB")
+    else:
+        image = image_path.copy()
+        image = Image.fromarray(image)
+
+
+
     image = ImageEnhance.Brightness(image).enhance(1.0)
     original_size = image.size
     input_tensor = transform(image).unsqueeze(0).to(device)
@@ -43,7 +74,10 @@ def single_inference(image_path, threshold=0.1, min_pixel=1000, show_result=True
         output = model(input_tensor)
         pred = torch.sigmoid(output).squeeze().cpu().numpy()
     end_time = time.time()
-    print(f"[{os.path.basename(image_path)}] 推理耗时: {(end_time - start_time) * 1000:.2f} ms")
+    if isinstance(image_path, str):
+        print(f"[{os.path.basename(image_path)}] 推理耗时: {(end_time - start_time) * 1000:.2f} ms")
+    else:
+        print(f"推理耗时: {(end_time - start_time) * 1000:.2f} ms")
 
     # 还原为原始大小
     pred_np_resized = cv2.resize(pred.squeeze(), original_size, interpolation=cv2.INTER_NEAREST)
@@ -72,6 +106,8 @@ def single_inference(image_path, threshold=0.1, min_pixel=1000, show_result=True
 
         plt.tight_layout()
         plt.show()
+    
+    return overlay
 
 def batch_inference(folder_path, threshold=0.1, min_pixel=1000):
     for image_name in sorted(os.listdir(folder_path)):
@@ -90,12 +126,11 @@ def video_inference(video_path, threshold=0.1, min_pixel=1000):
         ret, frame = cap.read()
         if not ret:
             break
-        # 保存帧图像到临时路径
-        temp_path = f"temp_frame_{frame_id}.jpg"
-        cv2.imwrite(temp_path, frame)
-        print(f"\n[视频帧 {frame_id}]")
-        single_inference(temp_path, threshold, min_pixel, show_result=False)
-        os.remove(temp_path)
+        # 视频流显示推理结果
+        overlay = single_inference(frame, threshold, min_pixel, show_result=False)
+        cv2.imshow("Video", overlay)
+        cv2.waitKey(1)
+        # cv2.imwrite(f"temp_frame_{frame_id}.jpg", overlay)
         frame_id += 1
 
     cap.release()
@@ -104,12 +139,13 @@ def video_inference(video_path, threshold=0.1, min_pixel=1000):
 if __name__ == "__main__":
     # 单张图像推理
     image_path = "dataset/images/Image_20250510161147250.bmp"
+    # image_path = "temp_frame_53.jpg"
     single_inference(image_path)
 
     # 批量推理
-    folder_path = "dataset/images"
-    batch_inference(folder_path)
+    # folder_path = "dataset/images"
+    # batch_inference(folder_path)
 
     # 视频推理
-    video_path = "dataset/videos/video.mp4"
+    video_path = "dataset/videos/Video_20250627092359474.avi"
     video_inference(video_path)
