@@ -16,7 +16,7 @@ class MaskEditor:
     def __init__(self, image_folder, mask_folder):
         self.image_folder = image_folder
         self.mask_folder = mask_folder
-        self.image_paths = sorted(glob(os.path.join(image_folder, "*.bmp")))  # add bmp jpg png etc. if needed
+        self.image_paths = sorted(glob(os.path.join(image_folder, "*.jpg")))  # add bmp jpg png etc. if needed
         self.current_image = None
         self.current_index = 0
 
@@ -37,14 +37,20 @@ class MaskEditor:
         ax_save = plt.axes([0.5, 0.05, 0.1, 0.075])
         ax_delete = plt.axes([0.7, 0.05, 0.1, 0.075])
         ax_undo = plt.axes([0.9, 0.05, 0.1, 0.075])
+        ax_clean = plt.axes([0.1, 0.15, 0.1, 0.075])
 
         self.btn_prev = Button(ax_prev, 'Previous')
         self.btn_next = Button(ax_next, 'Next')
         self.btn_save = Button(ax_save, 'Save')
         self.btn_delete = Button(ax_delete, 'Delete')
         self.btn_undo = Button(ax_undo, 'Undo')
-        # Connect the mouse click event to the erase function
+        self.btn_clean = Button(ax_clean, 'Clean')
+
+        # Connect the mouse click event to the erase function，允许长安拖动擦除
+        self.cid = None
         self.cid = self.fig.canvas.mpl_connect('button_press_event', self.erase_mask)
+        self.cid = self.fig.canvas.mpl_connect('motion_notify_event', self.erase_mask)
+        self.cid = self.fig.canvas.mpl_connect('button_release_event', self.release_mask)
 
         # Connect buttons to their functions
         self.btn_prev.on_clicked(self.show_previous_image)
@@ -52,6 +58,7 @@ class MaskEditor:
         self.btn_save.on_clicked(self.save_mask)
         self.btn_delete.on_clicked(self.delete_image_and_mask)
         self.btn_undo.on_clicked(self.undo_last_action)
+        self.btn_clean.on_clicked(self.clean_mask)
 
         # Display the first image and mask
         self.update_display()
@@ -121,7 +128,7 @@ class MaskEditor:
         print(f"Mask saved to {mask_path}")
 
     def erase_mask(self, event):
-        # 鼠标点击事件用于擦除鼠标位置直径为10范围内的mask
+        # 鼠标点击事件用于擦除鼠标位置直径为30范围内的mask
         # 允许长安拖动擦除，直到鼠标放开
         if event.inaxes != self.ax:
             return
@@ -129,13 +136,24 @@ class MaskEditor:
         x, y = int(event.xdata), int(event.ydata)
         # Check if the click is within the image bounds
         if (0 <= x < self.current_mask.shape[1]) and (0 <= y < self.current_mask.shape[0]):
-            # Erase the mask in a 10-pixel radius around the click
-            cv2.circle(self.current_mask, (x, y), 10, (0, 0, 0), -1)
+            # Erase the mask in a 30-pixel radius around the click
+            cv2.circle(self.current_mask, (x, y), 30, (0, 0, 0), -1)
             self.update_display()
             print(f"Erased mask at ({x}, {y})")
         else:
             print("Click is outside the image bounds.")
+        # If the mouse is pressed, we can continue to erase
+    def release_mask(self, event):
+        # This function can be used to finalize the mask editing when the mouse is released.
+        # For now, we will just print a message.
+        print("Mouse released, mask editing finalized.")
+        # You can implement additional logic here if needed.
 
+    def clean_mask(self, event):
+        # Clean the mask by removing all non-zero pixels
+        if self.current_mask is not None:
+            self.current_mask.fill(0)
+            self.update_display()
 
     def delete_image_and_mask(self, event):
         image_path = self.image_paths[self.current_index]
@@ -163,8 +181,8 @@ class MaskEditor:
     def run(self):
         plt.show()
 if __name__ == "__main__":
-    image_folder = "./dataset/images"  # Adjust the path to your images folder
-    mask_folder = "./dataset/masks"     # Adjust the path to your masks folder
+    image_folder = "./dataset/videos/images1"  # Adjust the path to your images folder
+    mask_folder = "./dataset/videos/masks1"     # Adjust the path to your masks folder
 
     editor = MaskEditor(image_folder, mask_folder)
     editor.run()

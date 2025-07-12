@@ -127,13 +127,20 @@ class UNetInference:
             cv2.imshow("Video", overlay)
             cv2.waitKey(1)
             # cv2.imwrite(f"temp_frame_{frame_id}.jpg", overlay)
+            # 保存为新的视频
+            output_path = "output_video.avi"
+            if frame_id == 0:
+                fourcc = cv2.VideoWriter_fourcc(*"XVID")
+                out = cv2.VideoWriter(output_path, fourcc, 30, (overlay.shape[1], overlay.shape[0]))
+            out.write(overlay)
+            
             frame_id += 1
 
         cap.release()
 
 
 if __name__ == "__main__":
-    unet_inference = UNetInference("best_unet_model.pth")
+    unet_inference = UNetInference("best_unet_model2.pth")
     image_path = "dataset/images/Image_20250510161147250.bmp"
     # image_path = "temp_frame_53.jpg"
     unet_inference.single_inference(image_path)
@@ -143,8 +150,8 @@ if __name__ == "__main__":
     # batch_inference(folder_path)
 
     # 视频推理
-    video_path = "dataset/videos/Video_20250627093322672.avi"
-    unet_inference.video_inference(video_path)
+    video_path = "dataset/videos/Video_20250627092359474.avi"
+    unet_inference.video_inference(video_path,min_pixel=8000)
 
 
 

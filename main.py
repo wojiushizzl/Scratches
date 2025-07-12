@@ -16,18 +16,26 @@ class CrackDetectionDataset(Dataset):
     def __init__(self, images_dir, masks_dir, image_size=(448, 448)):
         self.images = sorted([
             os.path.join(images_dir, f) for f in os.listdir(images_dir)
-            if f.endswith(('.jpg', '.png','.bmp'))
+            if f.endswith((
+                '.jpg', 
+                        #    '.png',
+                        '.bmp'
+                           ))
         ])
         self.masks = sorted([
             os.path.join(masks_dir, f) for f in os.listdir(masks_dir)
-            if f.endswith(('.jpg', '.png','.bmp'))
+            if f.endswith((
+                '.jpg', 
+                        #    '.png',
+                        '.bmp'
+                           ))
         ])
         self.img_tf = transforms.Compose([
             transforms.Resize(image_size),
-            transforms.RandomHorizontalFlip(),#水平翻转
-            transforms.RandomVerticalFlip(),#垂直翻转
-            transforms.RandomRotation(10),#随机旋转
-            transforms.ColorJitter(brightness=0.2),#随机颜色增强
+            # transforms.RandomHorizontalFlip(),#水平翻转
+            # transforms.RandomVerticalFlip(),#垂直翻转
+            # transforms.RandomRotation(10),#随机旋转
+            # transforms.ColorJitter(brightness=0.2),#随机颜色增强
             transforms.ToTensor(),
         ])
         self.mask_tf = transforms.Compose([
@@ -125,7 +133,7 @@ if __name__ == "__main__":
     model = UNet().to(device)
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
-    num_epochs = 30
+    num_epochs = 50
     best_dice = 0
 
     for epoch in range(num_epochs):
@@ -156,5 +164,5 @@ if __name__ == "__main__":
 
         if avg_dice > best_dice:
             best_dice = avg_dice
-            torch.save(model.state_dict(), "best_unet_model.pth")
+            torch.save(model.state_dict(), "best_unet_model2.pth")
             print(f"🎯 Best model saved. Dice = {best_dice:.4f}")
